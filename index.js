@@ -9,7 +9,7 @@ const app = express()
   .get('/', (req, res) => res.render('pages/index'))
 
 
-app.get('api/history/:roomId', (req, res) => {
+app.get('/api/history/:roomId', (req, res) => {
   res.send(req.params)
 })
 
