@@ -1,13 +1,15 @@
 const express = require('express')
 const path = require('path')
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 8080
 
 const app = express()
-  .use(express.static(path.join(__dirname, 'public')))
-  .set('views', path.join(__dirname, 'views'))
-  .set('view engine', 'ejs')
-  .get('/', (req, res) => res.render('pages/index'))
+  .use(express.static(path.join(__dirname, '/client/build')))
 
+
+app.get('/', function (req, res) {
+    res.sendFile(path.join(__dirname, '/client/build', 'index.html'));
+});
+  
 
 app.get('/api/history/:roomId', (req, res) => {
   res.send(req.params)
