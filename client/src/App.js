@@ -10,12 +10,14 @@ function App() {
   const [reid, setReid] = useState(); 
   const [nickname, setNickname] = useState();
   useEffect(() => {
-    setReid(new URLSearchParams(location.search.toString()).get('reid'))
-    axios.get(`${process.env.SERVER_URL}/api/nickname/${reid}`).then((res) => setNickname(res.data)).catch()
-  }, [])
+    if(new URLSearchParams(location.search.toString()).get('reid')) {
+      setReid(new URLSearchParams(location.search.toString()).get('reid'))
+      axios.get(`${process.env.SERVER_URL}/api/nickname/${reid}`).then((res) => setNickname(res.data)).catch()
+    }
+  })
   return (
     <div className="App">
-      <Chat reid={reid} nickname={nickname}></Chat>
+      {reid && nickname ? (<Chat reid={reid} nickname={nickname}></Chat>) : null}
     </div>
   );
 }
