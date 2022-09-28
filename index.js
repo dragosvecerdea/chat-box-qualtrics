@@ -29,7 +29,7 @@ const participantsToChats = {
 
 const reidToNickname = {
   'a': 'Ioana',
-  'b': 'Dragos'
+  'b': 'Sven'
 }
 
 const wss = new webSocket.Server({ server });
@@ -47,7 +47,7 @@ const chatHistory = [
   },
   {
     message: "Hello 2",
-    sender: "Dragos",
+    sender: "Sven",
     senderReid: "b",
   },
   {
