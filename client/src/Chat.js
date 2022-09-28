@@ -19,7 +19,7 @@ export default function Chat({reid, nickname='Ioana'})
         if (reid)
         {
             axios.get(`/api/chat/${reid}`).then((res) => setConversations(res.data))
-            let _ws = new WebSocket("ws://chat-box-qualtrics.herokuapp.com")
+            let _ws = new WebSocket("wss://chat-box-qualtrics.herokuapp.com")
             _ws.onopen = (event) => {
                 _ws.send(reid);
                 };
