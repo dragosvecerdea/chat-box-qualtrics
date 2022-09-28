@@ -6,40 +6,62 @@ import {
   Message,
   MessageInput,
 } from "@chatscope/chat-ui-kit-react";
-import React from "react";
+import React, {useEffect, useState} from "react";
+import axios from "axios";
 
-export default function Chat() 
+export default function Chat({reid, nickname='Ioana'}) 
 { 
+
+    const [conversations, setConversations] = useState([])
+    const [ws, setWs] = useState({})
+
+    useEffect(() => {
+        if (reid)
+        {
+            axios.get(`${process.env.SERVER_URL}/api/chat/${reid}`).then((res) => setConversations(res.data))
+            console.log('here')
+            let _ws = new WebSocket("ws://chat-box-qualtrics.herokuapp.com")
+            _ws.onopen = (event) => {
+                _ws.send(reid);
+                };
+            
+            _ws.onmessage = function ({data}) {
+                axios.get(`${process.env.SERVER_URL}/api/chat/${reid}`).then((res) => setConversations(res.data))
+            };
+            setWs(_ws)
+        }
+
+    }, [reid])
+
+
+    const sendMessage = ({reid, message}) => {
+        return axios.post(`${process.env.SERVER_URL}/api/chat/${reid}`, {message}, { headers: {'Content-Type': 'application/json'} })
+    }
     return (
     <div style={{ position: "relative", height: "500px" }}>
         <MainContainer>
             <ChatContainer>
             <MessageList>
-            {[...Array(5)].map((x, i) =>
+            {conversations.map((conv, i) =>
             <Message
                 key={i}
                 model={{
-                    message: "Hello my friend",
-                    sentTime: "just now",
-                    sender: "Joe",
-          }}
+                    message: conv.message,
+                    sender: conv.sender,
+                    direction: conv.senderReid == reid ? 'outgoing' : null,
+                }}
             >
-                <Message.Header sender={'Joe'}></Message.Header>
-                </Message>
-            )}
-                        {[...Array(5)].map((x, i) =>
-            <Message
-                key={i}
-                model={{
-                    message: "Hello my friend",
-                    sentTime: "just now",
-                    sender: "Joe",
-                    direction: 'outgoing'
-          }}
-            >                </Message>
+                <Message.Header sender={conv.sender}></Message.Header>
+            {conv.senderReid === reid ? (<Message.Header sender={conv.sender}></Message.Header>) : null}
+            </Message>
             )}
       </MessageList>
-      <MessageInput placeholder="Type message here" />
+      <MessageInput attachButton={false} onSend={(message) => sendMessage({message, reid}).then(setConversations([...conversations, {
+          message,
+          sentTime: new Date().getTime().toString(),
+          sender: nickname,
+          senderReid: reid
+      }])).catch()} placeholder="Type message here" />
     </ChatContainer>
   </MainContainer>
 </div>); 
