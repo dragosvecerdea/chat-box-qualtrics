@@ -41,19 +41,14 @@ const getChatForParticipant = () => {
 
 const chatHistory = [
   {
-    message: "Hello 1",
+    message: "Hi I am Ioana",
     sender: "Ioana",
     senderReid: "a",
   },
   {
-    message: "Hello 2",
+    message: "Hi I am Sven",
     sender: "Sven",
     senderReid: "b",
-  },
-  {
-    message: "Hello 1",
-    sender: "Ioana",
-    senderReid: "a",
   }
 ]
 
