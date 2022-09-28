@@ -12,7 +12,7 @@ function App() {
   useEffect(() => {
     if(new URLSearchParams(location.search.toString()).get('reid')) {
       setReid(new URLSearchParams(location.search.toString()).get('reid'))
-      axios.get(`}/api/nickname/${reid}`).then((res) => setNickname(res.data)).catch()
+      axios.get(`/api/nickname/${reid}`).then((res) => setNickname(res.data)).catch()
     }
   })
   return (
