@@ -18,15 +18,15 @@ export default function Chat({reid, nickname='Ioana'})
     useEffect(() => {
         if (reid)
         {
-            axios.get(`${process.env.SERVER_URL}/api/chat/${reid}`).then((res) => setConversations(res.data))
+            axios.get(`/api/chat/${reid}`).then((res) => setConversations(res.data))
             console.log('here')
-            let _ws = new WebSocket("ws://chat-box-qualtrics.herokuapp.com")
+            let _ws = new WebSocket("ws://localhost:8080")
             _ws.onopen = (event) => {
                 _ws.send(reid);
                 };
             
             _ws.onmessage = function ({data}) {
-                axios.get(`${process.env.SERVER_URL}/api/chat/${reid}`).then((res) => setConversations(res.data))
+                axios.get(`/api/chat/${reid}`).then((res) => setConversations(res.data))
             };
             setWs(_ws)
         }
@@ -35,7 +35,7 @@ export default function Chat({reid, nickname='Ioana'})
 
 
     const sendMessage = ({reid, message}) => {
-        return axios.post(`${process.env.SERVER_URL}/api/chat/${reid}`, {message}, { headers: {'Content-Type': 'application/json'} })
+        return axios.post(`/api/chat/${reid}`, {message}, { headers: {'Content-Type': 'application/json'} })
     }
     return (
     <div style={{ position: "relative", height: "500px" }}>

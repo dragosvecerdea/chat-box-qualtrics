@@ -11,7 +11,7 @@ function App() {
   const [nickname, setNickname] = useState();
   useEffect(() => {
     setReid(new URLSearchParams(location.search.toString()).get('reid'))
-    axios.get(`${process.env.SERVER_URL}/api/nickname/${reid}`).then((res) => setNickname(res.data)).catch()
+    reid && axios.get(`/api/nickname/${reid}`).then((res) => setNickname(res.data)).catch()
   }, [])
   return (
     <div className="App">
