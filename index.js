@@ -74,11 +74,15 @@ app.post("/api/register/:reid", (req, res) => {
       (chat) => activeChats[chat] <= 2
     );
     if (!freeChat) {
-      let newChat = (Math.random() + 1).toString(36).substring(7);
+      let newChat =
+        `${(Object.keys(activeChats).length % 2) + 1}-` +
+        (Math.random() + 1).toString(36).substring(7);
       while (
         Object.keys(activeChats).findIndex((chat) => chat == newChat) != -1
       ) {
-        newChat = (Math.random() + 1).toString(36).substring(7);
+        newChat =
+          `${(Object.keys(activeChats).length % 2) + 1}-` +
+          (Math.random() + 1).toString(36).substring(7);
       }
       activeChats[newChat] = 1;
       chatHistories[newChat] = [];
@@ -95,11 +99,14 @@ app.post("/api/register/:reid", (req, res) => {
 
 app.get("/api/role/:reid", (req, res) => {
   const chat = participantsToChats[req.params.reid];
+
   res.send({
-    res: Object.entries(participantsToChats)
-      .filter((p) => p[1] == chat)
-      .sort((p1, p2) => p1[0] < p2[0])
-      .findIndex((p) => p[0] == req.params.reid),
+    control: chat.substring(0, 1) == "1",
+    role:
+      Object.entries(participantsToChats)
+        .filter((p) => p[1] == chat)
+        .sort((p1, p2) => p1[0] < p2[0])
+        .findIndex((p) => p[0] == req.params.reid) + 1,
   });
 });
 
