@@ -66,7 +66,6 @@ app.post("/api/register/:reid", (req, res) => {
   console.log(reid);
   if (reidToNickname[reid]) {
     res.sendStatus(200);
-    console;
     return;
   } else {
     reidToNickname[reid] = nickname;
