@@ -63,7 +63,6 @@ app.post("/api/register/:reid", (req, res) => {
   // req.query
   let reid = req.params.reid;
   let nickname = req.query.nickname;
-  console.log(reid);
   if (reidToNickname[reid]) {
     res.sendStatus(200);
     return;
@@ -75,13 +74,13 @@ app.post("/api/register/:reid", (req, res) => {
     if (!freeChat) {
       let newChat =
         `${(Object.keys(activeChats).length % 2) + 1}-` +
-        (Math.random() + 1).toString(36).substring(7);
+        (Math.random() + 1).toString(10).substring(7);
       while (
         Object.keys(activeChats).findIndex((chat) => chat == newChat) != -1
       ) {
         newChat =
           `${(Object.keys(activeChats).length % 2) + 1}-` +
-          (Math.random() + 1).toString(36).substring(7);
+          (Math.random() + 1).toString(10).substring(7);
       }
       activeChats[newChat] = 1;
       chatHistories[newChat] = [];
