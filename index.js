@@ -4,7 +4,6 @@ const path = require("path");
 const http = require("http");
 const bodyParser = require("body-parser");
 const webSocket = require("ws");
-const assert = require("assert");
 const PORT = process.env.PORT || 8080;
 
 const app = express()
@@ -24,50 +23,29 @@ app.get("/", function (req, res) {
   res.sendFile(path.join(__dirname, "/client/build", "index.html"));
 });
 
-const participantsToChats = {
-  a: "chat1",
-  b: "chat1",
-};
+const participantsToChats = {};
 
-const reidToNickname = {
-  a: "Ioana",
-  b: "Sven",
-};
+let reidToNickname = new Object();
 
 const wss = new webSocket.Server({ server });
 
 const getChatForParticipant = () => {};
 
-const chatHistory = [
-  {
-    message: "Hi I am Ioana",
-    sender: "Ioana",
-    senderReid: "a",
-  },
-  {
-    message: "Hi I am Sven",
-    sender: "Sven",
-    senderReid: "b",
-  },
-];
+const chatHistory = [];
 
 const chatHistories = {
   chat1: chatHistory,
 };
 
-const activeChats = {
-  chat1: 2,
-};
+const activeChats = {};
 
 app.post("/api/register/:reid", (req, res) => {
   // req.query
-  let reid = req.params.reid;
-  let nickname = req.query.nickname;
-  if (reidToNickname[reid]) {
-    res.sendStatus(200);
-    return;
-  } else {
-    reidToNickname[reid] = nickname;
+  if (!reidToNickname[req.params.reid]) {
+    const reid = req.params.reid;
+    const nickname = req.query.nickname;
+    const sex = req.query.sex;
+    reidToNickname[req.params.reid] = nickname;
     const freeChat = Object.keys(activeChats).find(
       (chat) => activeChats[chat] <= 2
     );
@@ -93,6 +71,7 @@ app.post("/api/register/:reid", (req, res) => {
     }
   }
   res.sendStatus(200);
+  console.log(reidToNickname);
 });
 
 app.get("/api/role/:reid", (req, res) => {
@@ -109,7 +88,7 @@ app.get("/api/role/:reid", (req, res) => {
 });
 
 app.post("/api/nickname/:reid", (req, res) => {
-  reidToNickname[req.params.reid] = req.body.nickaname;
+  reidToNickname[req.params.reid] = req.body.nickname;
 });
 
 app.get("/api/nickname/:reid", (req, res) => {
