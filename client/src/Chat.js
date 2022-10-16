@@ -1,5 +1,6 @@
 import styles from "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 import {
+  Avatar,
   MainContainer,
   ChatContainer,
   MessageList,
@@ -10,12 +11,14 @@ import {
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function Chat({ reid, nickname = "Ioana" }) {
+export default function Chat({ reid, nickname, sex = "male" }) {
   const [conversations, setConversations] = useState([]);
-  const [ws, setWs] = useState({});
+  const [_reid, setReid] = useState(reid);
+  const [ws, setWs] = useState(null);
 
   useEffect(() => {
-    if (reid) {
+    if (reid && !ws) {
+      setReid(reid);
       axios
         .get(`${process.env.REACT_APP_SERVER || ""}/api/chat/${reid}`)
         .then((res) => setConversations(res.data));
@@ -25,16 +28,21 @@ export default function Chat({ reid, nickname = "Ioana" }) {
       );
       _ws.onopen = (event) => {
         _ws.send(reid);
+        axios.get(`${process.env.REACT_APP_SERVER || ""}/api/chat/${_reid}`);
       };
 
       _ws.onmessage = function({ data }) {
         axios
-          .get(`${process.env.REACT_APP_SERVER || ""}/api/chat/${reid}`)
+          .get(`${process.env.REACT_APP_SERVER || ""}/api/chat/${_reid}`)
           .then((res) => setConversations(res.data));
+      };
+
+      _ws.onclose = function() {
+        setTimeout(() => setWs(null), 5000);
       };
       setWs(_ws);
     }
-  }, [reid]);
+  }, [reid, ws]);
 
   const sendMessage = ({ reid, message }) => {
     return axios.post(
@@ -47,13 +55,6 @@ export default function Chat({ reid, nickname = "Ioana" }) {
     <div style={{ position: "relative", height: "100px", minHeight: "400px" }}>
       <MainContainer>
         <ChatContainer>
-          <ConversationHeader>
-            <ConversationHeader.Content
-              userName="Experiment 1"
-              info="Topic ..."
-            />
-            <ConversationHeader.Actions></ConversationHeader.Actions>
-          </ConversationHeader>
           <MessageList>
             {conversations.map((conv, i) => (
               <Message
@@ -65,13 +66,17 @@ export default function Chat({ reid, nickname = "Ioana" }) {
                 }}
               >
                 <Message.Header sender={conv.sender}></Message.Header>
-                {conv.senderReid === reid ? (
-                  <Message.Header sender={conv.sender}></Message.Header>
+                {conv.senderReid != reid ? (
+                  <Avatar
+                    src={process.env.PUBLIC_URL + `/${conv.senderSex}.png`}
+                    size="s"
+                  />
                 ) : null}
               </Message>
             ))}
           </MessageList>
           <MessageInput
+            autoFocus
             attachButton={false}
             onSend={(message) =>
               sendMessage({ message, reid })
@@ -83,6 +88,7 @@ export default function Chat({ reid, nickname = "Ioana" }) {
                       sentTime: new Date().getTime().toString(),
                       sender: nickname,
                       senderReid: reid,
+                      senderSex: sex,
                     },
                   ])
                 )

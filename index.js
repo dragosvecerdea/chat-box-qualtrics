@@ -26,6 +26,7 @@ app.get("/", function (req, res) {
 const participantsToChats = {};
 
 let reidToNickname = new Object();
+let reidToSex = new Object();
 
 const wss = new webSocket.Server({ server });
 
@@ -44,8 +45,9 @@ app.post("/api/register/:reid", (req, res) => {
   if (!reidToNickname[req.params.reid]) {
     const reid = req.params.reid;
     const nickname = req.query.nickname;
-    const sex = req.query.sex;
+    const sex = req.query.sex.toLowerCase();
     reidToNickname[req.params.reid] = nickname;
+    reidToSex[req.params.reid] = sex;
     const freeChat = Object.keys(activeChats).find(
       (chat) => activeChats[chat] <= 2
     );
@@ -91,6 +93,17 @@ app.post("/api/nickname/:reid", (req, res) => {
   reidToNickname[req.params.reid] = req.body.nickname;
 });
 
+app.get("/api/group/:reid", (req, res) => {
+  const partners = Object.keys(participantsToChats).filter(
+    (p) =>
+      participantsToChats[p] === participantsToChats[req.params.reid] &&
+      p !== req.params.reid
+  );
+  res.send({
+    partners: partners.map((p) => reidToNickname[p]),
+  });
+});
+
 app.get("/api/nickname/:reid", (req, res) => {
   res.send(reidToNickname[req.params.reid]);
 });
@@ -104,6 +117,7 @@ app.post("/api/chat/:reid", (req, res) => {
     message: req.body.message,
     sender: reidToNickname[req.params.reid],
     senderReid: req.params.reid,
+    senderSex: reidToSex[req.params.reid],
   });
   wss.clients.forEach((client) => {
     if (client.reid != req.params.reid) {
@@ -112,6 +126,7 @@ app.post("/api/chat/:reid", (req, res) => {
           message: req.body.message,
           sender: reidToNickname[req.params.reid],
           senderReid: req.params.reid,
+          senderSex: reidToSex[req.params.reid],
         })
       );
     }
