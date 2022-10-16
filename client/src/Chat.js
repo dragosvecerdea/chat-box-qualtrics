@@ -52,7 +52,7 @@ export default function Chat({ reid, nickname, sex = "male" }) {
     );
   };
   return (
-    <div style={{ position: "relative", height: "100px", minHeight: "290px" }}>
+    <div style={{ position: "relative", height: "100px", minHeight: "300px" }}>
       <MainContainer>
         <ChatContainer>
           <MessageList>
