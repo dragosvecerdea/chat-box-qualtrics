@@ -5,6 +5,7 @@ const http = require("http");
 const bodyParser = require("body-parser");
 const webSocket = require("ws");
 const PORT = process.env.PORT || 8080;
+const Pool = require("pg").Pool;
 
 const app = express()
   .use(express.static(path.join(__dirname, "/client/build")))
@@ -16,6 +17,14 @@ const app = express()
       extended: true,
     })
   );
+
+const pool = new Pool({
+  connectionString:
+    "postgres://iljejgwsoimzvh:17edc5b53249f8317618d40807429b0fda3f9b6f02b296d182784081ad6bfe37@ec2-34-234-240-121.compute-1.amazonaws.com:5432/d9m8al2jf5q3rn",
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
 
 let server = http.createServer(app);
 
@@ -40,53 +49,75 @@ const chatHistories = {
 
 const activeChats = {};
 
+let chatCount = 0;
+
 app.post("/api/register/:reid", (req, res) => {
   // req.query
-  if (!reidToNickname[req.params.reid]) {
-    const reid = req.params.reid;
-    const nickname = req.query.nickname;
-    const sex = req.query.sex.toLowerCase();
-    reidToNickname[req.params.reid] = nickname;
-    reidToSex[req.params.reid] = sex;
-    const freeChat = Object.keys(activeChats).find(
-      (chat) => activeChats[chat] <= 2
-    );
-    if (!freeChat) {
-      let newChat =
-        `${(Object.keys(activeChats).length % 2) + 1}-` +
-        (Math.random() + 1).toString(10).substring(7);
-      while (
-        Object.keys(activeChats).findIndex((chat) => chat == newChat) != -1
-      ) {
-        newChat =
-          `${(Object.keys(activeChats).length % 2) + 1}-` +
-          (Math.random() + 1).toString(10).substring(7);
+  const reid = req.params.reid;
+  const nickname = req.query.nickname;
+  const sex = req.query.sex.toLowerCase();
+  pool.query(
+    "INSERT INTO participant (reid, nickname, sex) VALUES ($1, $2, $3) RETURNING *",
+    [reid, nickname, sex],
+    (error, results) => {
+      if (error) {
+        console.log(error);
+        res.sendStatus(400);
+        return;
       }
-      activeChats[newChat] = 1;
-      chatHistories[newChat] = [];
-      participantsToChats[reid] = newChat;
-      console.log(`Participant ${reid} assigned to ${newChat} chat`);
-    } else {
-      activeChats[freeChat] += 1;
-      participantsToChats[reid] = freeChat;
-      console.log(`Participant ${reid} assigned to ${freeChat} chat`);
+      pool.query(
+        "SELECT chatid,COUNT(*) FROM chats GROUP BY chatid HAVING COUNT(*) <= 2",
+        (err, response) => {
+          if (err) {
+            res.sendStatus(400);
+            return;
+          }
+          let newChat = "";
+          if (response.rowCount == 0) {
+            newChat =
+              `${(chatCount % 2) + 1}-` +
+              (Math.random() + 1).toString(10).substring(7);
+            chatCount += 1;
+          } else {
+            newChat = response.rows[0].chatid;
+          }
+          pool.query(
+            "INSERT INTO chats (chatid, reid) VALUES ($1, $2)",
+            [newChat, reid],
+            (err, response) => {
+              if (err) {
+                res.sendStatus(400);
+                return;
+              }
+              res.sendStatus(200);
+            }
+          );
+        }
+      );
     }
-  }
-  res.sendStatus(200);
-  console.log(reidToNickname);
+  );
 });
 
 app.get("/api/role/:reid", (req, res) => {
-  const chat = participantsToChats[req.params.reid];
-
-  res.send({
-    control: chat.substring(0, 1) == "1",
-    role:
-      Object.entries(participantsToChats)
-        .filter((p) => p[1] == chat)
-        .sort((p1, p2) => p1[0] < p2[0])
-        .findIndex((p) => p[0] == req.params.reid) + 1,
-  });
+  pool.query(
+    "SELECT chatid, reid FROM chats WHERE reid = $1",
+    [req.params.reid],
+    (err, response1) => {
+      const control = response1.rows[0].chatid.substring(0, 1) == "1";
+      pool.query(
+        "SELECT chatid, reid FROM chats WHERE chatid = $1 ORDER BY reid",
+        [response1.rows[0].chatid],
+        (err, response2) => {
+          console.log(err);
+          res.send({
+            control,
+            role:
+              response2.rows.findIndex((r) => r.reid == req.params.reid) + 1,
+          });
+        }
+      );
+    }
+  );
 });
 
 app.post("/api/nickname/:reid", (req, res) => {
@@ -94,14 +125,22 @@ app.post("/api/nickname/:reid", (req, res) => {
 });
 
 app.get("/api/group/:reid", (req, res) => {
-  const partners = Object.keys(participantsToChats).filter(
-    (p) =>
-      participantsToChats[p] === participantsToChats[req.params.reid] &&
-      p !== req.params.reid
+  pool.query(
+    "SELECT chatid FROM chats WHERE reid = $1",
+    [req.params.reid],
+    (err, response1) => {
+      pool.query(
+        "SELECT p.nickname AS nickname FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1 AND c.reid != $2",
+        [response1.rows[0].chatid, req.params.reid],
+        (err, response2) => {
+          console.log(err);
+          res.send({
+            partners: response2.rows.map((r) => r.nickname),
+          });
+        }
+      );
+    }
   );
-  res.send({
-    partners: partners.map((p) => reidToNickname[p]),
-  });
 });
 
 app.get("/api/nickname/:reid", (req, res) => {
@@ -109,29 +148,64 @@ app.get("/api/nickname/:reid", (req, res) => {
 });
 
 app.get("/api/chat/:reid", (req, res) => {
-  res.send(chatHistories[participantsToChats[req.params.reid]]);
-});
-
-app.post("/api/chat/:reid", (req, res) => {
-  chatHistories[participantsToChats[req.params.reid]].push({
-    message: req.body.message,
-    sender: reidToNickname[req.params.reid],
-    senderReid: req.params.reid,
-    senderSex: reidToSex[req.params.reid],
-  });
-  wss.clients.forEach((client) => {
-    if (client.reid != req.params.reid) {
-      client.send(
-        JSON.stringify({
-          message: req.body.message,
-          sender: reidToNickname[req.params.reid],
-          senderReid: req.params.reid,
-          senderSex: reidToSex[req.params.reid],
+  pool.query(
+    "SELECT m.message as message, p.nickname as nickname, m.reid as reid, p.sex as sex FROM chats AS c JOIN messages AS m ON m.chatid = c.chatid JOIN participant AS p ON m.reid = p.reid WHERE c.reid=$1",
+    [req.params.reid],
+    (err, response) => {
+      if (err) {
+        console.log(err);
+        res.sendStatus(400);
+        return;
+      }
+      res.send(
+        response.rows.map((r) => {
+          return {
+            message: r.message,
+            sender: r.nickname,
+            senderSex: r.sex,
+            senderReid: r.reid,
+          };
         })
       );
     }
-  });
-  res.sendStatus(200);
+  );
+});
+
+app.post("/api/chat/:reid", (req, res) => {
+  pool.query(
+    "SELECT c.chatid as chatid, p.nickname as nickname, p.sex as sex FROM chats AS c JOIN participant AS p ON c.reid = p.reid WHERE p.reid = $1",
+    [req.params.reid],
+    (err, response1) => {
+      if (err) {
+        res.sendStatus(400);
+        return;
+      }
+      wss.clients.forEach((client) => {
+        if (client.reid != req.params.reid) {
+          client.send(
+            JSON.stringify({
+              message: req.body.message,
+              sender: response1.rows[0].nickname,
+              senderReid: req.params.reid,
+              senderSex: response1.rows[0].sex,
+            })
+          );
+        }
+      });
+      pool.query(
+        "INSERT INTO messages (reid, chatid, message, timestamp) VALUES($1, $2, $3, now())",
+        [req.params.reid, response1.rows[0].chatid, req.body.message],
+        (err, response2) => {
+          if (!err) {
+            res.sendStatus(200);
+          } else {
+            res.sendStatus(400);
+          }
+        }
+      );
+    }
+  );
+  // te iubesc pup pwp
 });
 
 wss.on("connection", (ws) => {
