@@ -57,7 +57,7 @@ app.post("/api/register/:reid", (req, res) => {
   const nickname = req.query.nickname;
   const sex = req.query.sex.toLowerCase();
   pool.query(
-    "INSERT INTO participant (reid, nickname, sex) VALUES ($1, $2, $3) RETURNING *",
+    "INSERT INTO participant (reid, nickname, sex, timestamp) VALUES ($1, $2, $3, now()) RETURNING *",
     [reid, nickname, sex],
     (error, results) => {
       if (error) {
