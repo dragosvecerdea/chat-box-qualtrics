@@ -19,8 +19,7 @@ const app = express()
   );
 
 const pool = new Pool({
-  connectionString:
-    "postgres://iljejgwsoimzvh:17edc5b53249f8317618d40807429b0fda3f9b6f02b296d182784081ad6bfe37@ec2-34-234-240-121.compute-1.amazonaws.com:5432/d9m8al2jf5q3rn",
+  connectionString: process.env.HEROKU_POSTGRESQL_CYAN_URL,
   ssl: {
     rejectUnauthorized: false,
   },
@@ -105,7 +104,7 @@ app.get("/api/role/:reid", (req, res) => {
     (err, response1) => {
       const control = response1.rows[0].chatid.substring(0, 1) == "1";
       pool.query(
-        "SELECT chatid, reid FROM chats WHERE chatid = $1 ORDER BY reid",
+        "SELECT chatid, reid FROM chats WHERE chatid = $1 ORDER BY timestamp",
         [response1.rows[0].chatid],
         (err, response2) => {
           console.log(err);
