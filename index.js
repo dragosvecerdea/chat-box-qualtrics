@@ -42,13 +42,13 @@ let chatCount = 0;
 
 const _reidToChat = {};
 
-function reidToChat(reid) {
+const reidToChat = async (reid) => {
   if (_reidToChat[reid]) return _reidToChat[reid];
-  const res = await pool.query("SELECT chatid FROM chats WHERE reid = $1", [reid])
-  console.log(res.rows[0].chatid)
-  _reidToChat[reid] = res.rows[0].chatid
-  return res.rows[0].chatid;
-}
+  const results = await pool.query("SELECT chatid FROM chats WHERE reid = $1", [
+    reid,
+  ]);
+  return results.rows[0].chatid;
+};
 
 app.post("/api/register/:reid", (req, res) => {
   // req.query
@@ -203,8 +203,9 @@ app.post("/api/chat/:reid", (req, res) => {
   // te iubesc pup pwp
 });
 
-app.get("/api/response/:reid", (req, res) => {
+app.get("/api/response/:reid", async (req, res) => {
   const reid = req.params.reid;
+  const chatid = await reidToChat[reid];
   pool.query(
     "UPDATE participant SET answers = $1 WHERE reid = $2",
     [req.query.answers, reid],
@@ -212,7 +213,7 @@ app.get("/api/response/:reid", (req, res) => {
       if (!err) {
         pool.query(
           "SELECT p.answers as answers FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1",
-          [reidToChat(reid)],
+          [chatid],
           (err, results) => {
             if (!err) {
               res.send(
