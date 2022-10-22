@@ -45,6 +45,7 @@ const _reidToChat = {};
 function reidToChat(reid) {
   if (_reidToChat(reid)) return _reidToChat(reid);
   const res = await pool.query("SELECT chatid FROM chats WHERE reid = $1", [reid])
+  _reidToChat[res.rows[0].chatid]
   return res.rows[0].chatid;
 }
 
@@ -86,7 +87,7 @@ app.post("/api/register/:reid", (req, res) => {
                 res.sendStatus(400);
                 return;
               }
-              reidToChat(reid) = newChat;
+              _reidToChat[reid] = newChat;
               res.sendStatus(200);
             }
           );
@@ -97,7 +98,7 @@ app.post("/api/register/:reid", (req, res) => {
 });
 
 app.get("/api/role/:reid", (req, res) => {
-  const chatid = reidToChat[req.params.reid];
+  const chatid = reidToChat(req.params.reid);
   const reid = req.params.reid;
   if (!chatid || !reid) {
     res.sendStatus(400);
@@ -122,7 +123,7 @@ app.post("/api/nickname/:reid", (req, res) => {
 });
 
 app.get("/api/group/:reid", (req, res) => {
-  const chatid = reidToChat[req.params.reid];
+  const chatid = reidToChat(req.params.reid);
   const reid = req.params.reid;
   if (!chatid || !reid) {
     res.sendStatus(400);
