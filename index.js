@@ -207,9 +207,7 @@ app.get("/api/response/:reid", (req, res) => {
           [reidToChat[reid]],
           (err, results) => {
             if (!err) {
-              res.send(
-                results.rows.every((v) => v.answers == results.rows[0].answers)
-              );
+              res.send(results.rows);
             }
           }
         );
