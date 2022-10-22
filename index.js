@@ -38,17 +38,9 @@ let reidToSex = new Object();
 
 const wss = new webSocket.Server({ server });
 
-const getChatForParticipant = () => {};
-
-const chatHistory = [];
-
-const chatHistories = {
-  chat1: chatHistory,
-};
-
-const activeChats = {};
-
 let chatCount = 0;
+
+const reidToChat = {};
 
 app.post("/api/register/:reid", (req, res) => {
   // req.query
@@ -58,7 +50,7 @@ app.post("/api/register/:reid", (req, res) => {
   pool.query(
     "INSERT INTO participant (reid, nickname, sex, timestamp) VALUES ($1, $2, $3, now()) RETURNING *",
     [reid, nickname, sex],
-    (error, results) => {
+    (error, _) => {
       if (error) {
         console.log(error);
         res.sendStatus(400);
@@ -88,6 +80,7 @@ app.post("/api/register/:reid", (req, res) => {
                 res.sendStatus(400);
                 return;
               }
+              reidToChat[reid] = newChat;
               res.sendStatus(200);
             }
           );
@@ -98,23 +91,22 @@ app.post("/api/register/:reid", (req, res) => {
 });
 
 app.get("/api/role/:reid", (req, res) => {
+  const chatid = reidToChat[req.params.reid];
+  const reid = req.params.reid;
+  if (!chatid || !reid) {
+    res.sendStatus(400);
+    return;
+  }
+  const control = chatid.substring(0, 1) == "1";
   pool.query(
-    "SELECT chatid, reid FROM chats WHERE reid = $1",
-    [req.params.reid],
-    (err, response1) => {
-      const control = response1.rows[0].chatid.substring(0, 1) == "1";
-      pool.query(
-        "SELECT chatid, reid FROM chats WHERE chatid = $1 ORDER BY timestamp",
-        [response1.rows[0].chatid],
-        (err, response2) => {
-          console.log(err);
-          res.send({
-            control,
-            role:
-              response2.rows.findIndex((r) => r.reid == req.params.reid) + 1,
-          });
-        }
-      );
+    "SELECT chatid, reid FROM chats WHERE chatid = $1 ORDER BY timestamp",
+    [chatid],
+    (err, results) => {
+      console.log(`Eroare in /api/role/${reid} ${err}`);
+      res.send({
+        control,
+        role: results.rows.findIndex((r) => r.reid == reid) + 1,
+      });
     }
   );
 });
@@ -124,26 +116,22 @@ app.post("/api/nickname/:reid", (req, res) => {
 });
 
 app.get("/api/group/:reid", (req, res) => {
+  const chatid = reidToChat[req.params.reid];
+  const reid = req.params.reid;
+  if (!chatid || !reid) {
+    res.sendStatus(400);
+    return;
+  }
   pool.query(
-    "SELECT chatid FROM chats WHERE reid = $1",
-    [req.params.reid],
-    (err, response1) => {
-      pool.query(
-        "SELECT p.nickname AS nickname FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1 AND c.reid != $2",
-        [response1.rows[0].chatid, req.params.reid],
-        (err, response2) => {
-          console.log(err);
-          res.send({
-            partners: response2.rows.map((r) => r.nickname),
-          });
-        }
-      );
+    "SELECT p.nickname AS nickname FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1 AND c.reid != $2",
+    [chatid, reid],
+    (err, results) => {
+      console.log(`Eroare in /api/group/${reid} ${err}`);
+      res.send({
+        partners: results.rows.map((r) => r.nickname),
+      });
     }
   );
-});
-
-app.get("/api/nickname/:reid", (req, res) => {
-  res.send(reidToNickname[req.params.reid]);
 });
 
 app.get("/api/chat/:reid", (req, res) => {
@@ -194,7 +182,7 @@ app.post("/api/chat/:reid", (req, res) => {
       pool.query(
         "INSERT INTO messages (reid, chatid, message, timestamp) VALUES($1, $2, $3, now())",
         [req.params.reid, response1.rows[0].chatid, req.body.message],
-        (err, response2) => {
+        (err, _) => {
           if (!err) {
             res.sendStatus(200);
           } else {
@@ -207,6 +195,29 @@ app.post("/api/chat/:reid", (req, res) => {
   // te iubesc pup pwp
 });
 
+app.get("/api/response/:reid", (req, res) => {
+  const reid = req.params.reid;
+  pool.query(
+    "UPDATE participant SET answers = $1 WHERE reid = $2",
+    [req.query.answers, reid],
+    (err, _) => {
+      if (!err) {
+        pool.query(
+          "SELECT p.answered as answers FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1",
+          [reid],
+          (err, results) => {
+            if (!err) {
+              res.send(
+                results.rows.every((v) => v.answers == results.rows[0].answers)
+              );
+            }
+          }
+        );
+      }
+    }
+  );
+});
+
 wss.on("connection", (ws) => {
   //connection is up, let's add a simple simple event
   ws.on("message", (reid) => {
@@ -215,7 +226,5 @@ wss.on("connection", (ws) => {
     console.log("reid has connected: ", reid);
   });
 });
-
-setInterval(() => chatHistory.splice(0, chatHistory.length), 120000);
 
 server.listen(PORT, () => console.log(`Listening on ${PORT}`));
