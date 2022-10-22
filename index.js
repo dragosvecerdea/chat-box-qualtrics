@@ -43,7 +43,7 @@ let chatCount = 0;
 const _reidToChat = {};
 
 function reidToChat(reid) {
-  if (_reidToChat(reid)) return _reidToChat(reid);
+  if (_reidToChat[reid]) return _reidToChat[reid];
   const res = await pool.query("SELECT chatid FROM chats WHERE reid = $1", [reid])
   _reidToChat[res.rows[0].chatid]
   return res.rows[0].chatid;
