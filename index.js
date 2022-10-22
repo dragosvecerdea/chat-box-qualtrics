@@ -204,7 +204,7 @@ app.get("/api/response/:reid", (req, res) => {
       if (!err) {
         pool.query(
           "SELECT p.answers as answers FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1",
-          [reid],
+          [reidToChat[reid]],
           (err, results) => {
             if (!err) {
               res.send(
