@@ -40,7 +40,13 @@ const wss = new webSocket.Server({ server });
 
 let chatCount = 0;
 
-const reidToChat = {};
+const _reidToChat = {};
+
+function reidToChat(reid) {
+  if (_reidToChat(reid)) return _reidToChat(reid);
+  const res = await pool.query("SELECT chatid FROM chats WHERE reid = $1", [reid])
+  return res.rows[0].chatid;
+}
 
 app.post("/api/register/:reid", (req, res) => {
   // req.query
@@ -80,7 +86,7 @@ app.post("/api/register/:reid", (req, res) => {
                 res.sendStatus(400);
                 return;
               }
-              reidToChat[reid] = newChat;
+              reidToChat(reid) = newChat;
               res.sendStatus(200);
             }
           );
@@ -204,10 +210,12 @@ app.get("/api/response/:reid", (req, res) => {
       if (!err) {
         pool.query(
           "SELECT p.answers as answers FROM participant AS p JOIN chats AS c ON p.reid = c.reid WHERE c.chatid = $1",
-          [reidToChat[reid]],
+          [reidToChat(reid)],
           (err, results) => {
             if (!err) {
-              res.send(results.rows);
+              res.send(
+                results.rows.every((r) => r.answers == results.rows[0].answers)
+              );
             }
           }
         );
